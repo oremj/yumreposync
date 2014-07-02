@@ -1,25 +1,32 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"log"
 	"net/http"
+
+	"github.com/oremj/yumreposync/handlers"
 )
 
-func validateFlags() {
+func validateFlags() error {
 	if *repoDir == "" {
-		flag.Usage()
-		log.Fatal("-repodir is required.")
+		return errors.New("-repodir is required.")
 	}
 
 	if *s3Bucket == "" {
-		flag.Usage()
-		log.Fatal("-repobucket is required.")
+		return errors.New("-bucket is required.")
 	}
+	return nil
 }
 
 func main() {
 	flag.Parse()
-	validateFlags()
+	if err := validateFlags(); err != nil {
+		flag.Usage()
+		log.Fatal(err)
+	}
+
+	http.HandleFunc("/publish", handlers.Publish)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
