@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/oremj/yumreposync/aws"
 )
 
 func copyFile(fileName string, w io.Writer) error {
@@ -22,9 +24,26 @@ func copyFile(fileName string, w io.Writer) error {
 }
 
 func Push(url string, fileNames []string) error {
-	body := new(bytes.Buffer)
+	creds, err := aws.TemporaryCreds()
+	if err != nil {
+		return err
+	}
 
+	body := new(bytes.Buffer)
 	fw := multipart.NewWriter(body)
+
+	params := map[string]string{
+		"AccessKeyId":     creds.AccessKeyId,
+		"SecretAccessKey": creds.SecretAccessKey,
+		"SessionToken":    creds.SessionToken,
+	}
+
+	for k, v := range params {
+		err := fw.WriteField(k, v)
+		if err != nil {
+			return err
+		}
+	}
 
 	for i, fileName := range fileNames {
 		baseFileName := filepath.Base(fileName)
