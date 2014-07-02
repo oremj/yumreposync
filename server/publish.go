@@ -1,4 +1,4 @@
-package handlers
+package server
 
 import (
 	"io"
@@ -51,7 +51,7 @@ func writeFiles(req *http.Request) error {
 func Publish(w http.ResponseWriter, req *http.Request) {
 	if err := writeFiles(req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		log.Print("Error: Publish: %s", err)
+		log.Printf("Error: Publish: %s", err)
 		return
 	}
 }

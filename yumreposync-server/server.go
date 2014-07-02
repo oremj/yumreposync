@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/oremj/yumreposync/handlers"
+	"github.com/oremj/yumreposync/server"
 )
 
 func validateFlags() error {
@@ -27,6 +27,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	http.HandleFunc("/publish", handlers.Publish)
+	http.HandleFunc("/publish", server.Publish)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
