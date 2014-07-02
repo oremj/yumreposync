@@ -27,6 +27,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	server.Storage.RepoDir = *repoDir
+
 	http.HandleFunc("/publish", server.Publish)
 	log.Fatal(http.ListenAndServe(*addr, nil))
 }
