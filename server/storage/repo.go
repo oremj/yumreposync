@@ -1,13 +1,12 @@
 package storage
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"mime/multipart"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 )
@@ -21,9 +20,19 @@ func (s *Storage) SanitizeFileName(name string) string {
 	return filepath.Base(name)
 }
 
-func (s *Storage) writeFile(dir, name string, r io.Reader) error {
+func (s *Storage) updateMetadata() error {
+	c := exec.Command("createrepo", ".")
+	c.Dir = s.RepoDir
+	out, err := c.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("createrepo: %s, %s", err, out)
+	}
+	return nil
+}
+
+func (s *Storage) writeFile(name string, r io.Reader) error {
 	sanitizedName := s.SanitizeFileName(name)
-	f, err := os.Create(filepath.Join(dir, sanitizedName))
+	f, err := os.Create(filepath.Join(s.RepoDir, sanitizedName))
 	if err != nil {
 		return err
 	}
@@ -37,36 +46,25 @@ func (s *Storage) writeFile(dir, name string, r io.Reader) error {
 	return nil
 }
 
-func (s *Storage) PublishMultiPartFiles(reader *multipart.Reader) error {
+func (s *Storage) PublishMultiPartFiles(form *multipart.Form) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	tmpDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		return err
-	}
 
-	params := make(map[string]string)
-	for {
-		part, err := reader.NextPart()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		if part.FileName() == "" {
-			tmp := new(bytes.Buffer)
-			_, err = tmp.ReadFrom(part)
+	for _, files := range form.File {
+		for _, file := range files {
+			tmp, err := file.Open()
 			if err != nil {
 				return err
 			}
-			params[part.FormName()] = tmp.String()
-		} else if err := s.writeFile(tmpDir, part.FileName(), part); err != nil {
-			return err
+			if err := s.writeFile(file.Filename, tmp); err != nil {
+				return err
+			}
 		}
 	}
 
-	fmt.Println(params)
+	if err := s.updateMetadata(); err != nil {
+		return err
+	}
+
 	return nil
 }

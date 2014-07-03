@@ -6,11 +6,13 @@ import (
 )
 
 func writeFiles(req *http.Request) error {
-	mp, err := req.MultipartReader()
-	if err != nil {
+	// Fit 1 GB in to memory
+	if err := req.ParseMultipartForm(1024 << 20); err != nil {
 		return err
 	}
-	return Storage.PublishMultiPartFiles(mp)
+	defer req.MultipartForm.RemoveAll()
+
+	return Storage.PublishMultiPartFiles(req.MultipartForm)
 }
 
 func Publish(w http.ResponseWriter, req *http.Request) {
